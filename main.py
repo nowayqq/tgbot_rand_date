@@ -4,41 +4,39 @@ from requests.exceptions import ReadTimeout
 from datetime import datetime, timedelta
 from random import randrange
 
+bot = telebot.TeleBot('')
 
-bot = telebot.TeleBot('ENTER_YOUR_TOKEN')
 
 
-VALID_ID = 'ENTER_YOUR_ID'
+VALID_ID =
 NEXT_MSG_DATE = False
 NEXT_MSG_MSG = False
 SUB = ['A', 'P']
 DATERANGE = '01.01.00-31.12.30'
 MSG = 'Дмитрий поел пиццу в \"\". Примерно в \'\'.'
-
-
-def random_date(start, end):
-    delta = end - start
-    int_delta = (delta.days * 24 * 60 * 60) + delta.seconds
-    random_second = randrange(int_delta)
-    return start + timedelta(seconds=random_second)
+START = None
+END = None
 
 
 def prepareMessage():
     global MSG
     global DATERANGE
-    parsed = parseDate(DATERANGE)
-    date = random_date(parsed[0], parsed[1])
-    new_msg = MSG.replace('\"\"', f'{date.day}.{date.month}.{date.year}')
-    new_msg = new_msg.replace('\'\'', f'{date.hour}:{date.minute}')
+    global START
+    START += timedelta(hours=1)
+    new_msg = MSG.replace('\"\"', f'{START.day}.{START.month}.{START.year}')
+    new_msg = new_msg.replace('\'\'', f'{START.hour}:00')
     return new_msg
 
 
 def parseDate(s):
-    start = datetime.strptime(f'{s[:2]}.{s[3:5]}.20{s[6:8]} {int(randrange(1, 12))}:'
-                              f'{int(randrange(0, 60))} {SUB[randrange(0, 2)]}M', '%d.%m.%Y %I:%M %p')
-    end = datetime.strptime(f'{s[9:11]}.{s[12:14]}.20{s[15:17]} {int(randrange(1, 12))}:'
-                            f'{int(randrange(0, 60))} {SUB[randrange(0, 2)]}M', '%d.%m.%Y %I:%M %p')
-    return start, end
+    start_ = datetime.strptime(f'{s[:2]}.{s[3:5]}.20{s[6:8]} {int(randrange(1, 12))}:'
+                               f'{int(randrange(0, 60))} AM', '%d.%m.%Y %I:%M %p')
+    end_ = datetime.strptime(f'{s[9:11]}.{s[12:14]}.20{s[15:17]} {int(randrange(1, 12))}:'
+                             f'{int(randrange(0, 60))} AM', '%d.%m.%Y %I:%M %p')
+    global START
+    global END
+    START = start_
+    END = end_
 
 
 def setBaseMarkups():
@@ -55,11 +53,11 @@ def start(message):
     global VALID_ID
     if int(message.chat.id) != VALID_ID:
         mess = f'Привет, <b>{message.from_user.first_name}</b>, к сожалению, у вас нет прав'
-        bot.send_message(message.chat.id, mess, parse_mode='html')
+        bot.send_message('', mess, parse_mode='html')
     else:
         mess = f'Привет, <b>{message.from_user.first_name}</b>'
         markup = setBaseMarkups()
-        bot.send_message(message.chat.id, mess, parse_mode='html', reply_markup=markup)
+        bot.send_message('', mess, parse_mode='html', reply_markup=markup)
     print(message.chat.id)
 
 
@@ -72,10 +70,11 @@ def func(message):
     global VALID_ID
     if int(message.chat.id) != VALID_ID:
         mess = f'Привет, <b>{message.from_user.first_name}</b>, к сожалению, у вас нет прав'
-        bot.send_message(message.chat.id, mess, parse_mode='html')
+        bot.send_message('', mess, parse_mode='html')
     elif NEXT_MSG_DATE:
         NEXT_MSG_DATE = False
         DATERANGE = message.text
+
     elif NEXT_MSG_MSG:
         NEXT_MSG_MSG = False
         MSG = message.text
@@ -84,10 +83,15 @@ def func(message):
     elif message.text == 'Задать сообщение':
         NEXT_MSG_MSG = True
     elif message.text == 'Запустить генерацию':
+        parseDate(DATERANGE)
+        global START
+        global END
         # while True:
-        for i in range(10):
+        for i in range(100):
+            if START == END:
+                break
             mess = prepareMessage()
-            bot.send_message(message.chat.id, mess, parse_mode='html')
+            bot.send_message('', mess, parse_mode='html')
 
 
 try:
