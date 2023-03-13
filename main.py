@@ -3,19 +3,20 @@ from telebot import types
 from requests.exceptions import ReadTimeout
 from datetime import datetime, timedelta
 from random import randrange
+import time
+
 
 bot = telebot.TeleBot('')
-
 
 
 VALID_ID =
 NEXT_MSG_DATE = False
 NEXT_MSG_MSG = False
-SUB = ['A', 'P']
 DATERANGE = '01.01.00-31.12.30'
 MSG = 'Дмитрий поел пиццу в \"\". Примерно в \'\'.'
 START = None
 END = None
+BRAKEFLAG = False
 
 
 def prepareMessage():
@@ -43,8 +44,9 @@ def setBaseMarkups():
     dt = types.KeyboardButton('Задать дату')
     msg = types.KeyboardButton('Задать сообщение')
     run = types.KeyboardButton('Запустить генерацию')
+    st = types.KeyboardButton('/stop')
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
-    markup.add(dt, msg, run)
+    markup.add(dt, msg, run, st)
     return markup
 
 
@@ -53,11 +55,26 @@ def start(message):
     global VALID_ID
     if int(message.chat.id) != VALID_ID:
         mess = f'Привет, <b>{message.from_user.first_name}</b>, к сожалению, у вас нет прав'
-        bot.send_message('', mess, parse_mode='html')
+        bot.send_message(message.chat.id, mess, parse_mode='html')
     else:
         mess = f'Привет, <b>{message.from_user.first_name}</b>'
         markup = setBaseMarkups()
-        bot.send_message('', mess, parse_mode='html', reply_markup=markup)
+        bot.send_message(message.chat.id, mess, parse_mode='html', reply_markup=markup)
+    print(message.chat.id)
+
+
+@bot.message_handler(commands=['stop'])
+def stop(message):
+    global VALID_ID
+    if int(message.chat.id) != VALID_ID:
+        mess = f'Привет, <b>{message.from_user.first_name}</b>, к сожалению, у вас нет прав'
+        bot.send_message(message.chat.id, mess, parse_mode='html')
+    else:
+        mess = f'Остановка'
+        markup = setBaseMarkups()
+        global BRAKEFLAG
+        BRAKEFLAG = True
+        bot.send_message(message.chat.id, mess, parse_mode='html', reply_markup=markup)
     print(message.chat.id)
 
 
@@ -68,13 +85,13 @@ def func(message):
     global DATERANGE
     global MSG
     global VALID_ID
+
     if int(message.chat.id) != VALID_ID:
         mess = f'Привет, <b>{message.from_user.first_name}</b>, к сожалению, у вас нет прав'
-        bot.send_message('', mess, parse_mode='html')
+        bot.send_message(, mess, parse_mode='html')
     elif NEXT_MSG_DATE:
         NEXT_MSG_DATE = False
         DATERANGE = message.text
-
     elif NEXT_MSG_MSG:
         NEXT_MSG_MSG = False
         MSG = message.text
@@ -86,12 +103,17 @@ def func(message):
         parseDate(DATERANGE)
         global START
         global END
-        # while True:
-        for i in range(100):
-            if START == END:
+        global BRAKEFLAG
+        BRAKEFLAG = False
+        bot.send_message(message.chat.id, 'Запускаю', parse_mode='html')
+        i = 0
+        while True:
+            if START == END or BRAKEFLAG:
                 break
+            if not i % 5:
+                time.sleep(1)
             mess = prepareMessage()
-            bot.send_message('', mess, parse_mode='html')
+            bot.send_message(, mess, parse_mode='html')
 
 
 try:
